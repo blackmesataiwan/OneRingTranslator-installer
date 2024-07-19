@@ -15,6 +15,7 @@ echo What kind of installation do you want?
 echo.
 echo A) Fast (only online translators, no offline and multi_source support)
 echo B) Full (online, offline, multi_source support, BLEU and COMET estimations) (will install torch and unbabel ~1Gb)
+echo C) Full-CUDA (online, offline, multi_source support, BLEU and COMET estimations) (will install torch-cuda and unbabel ~1Gb)
 echo.
 set /p "gpuchoice=Input> "
 set gpuchoice=%gpuchoice:~0,1%
@@ -23,8 +24,11 @@ if /I "%gpuchoice%" == "A" (
     set "PACKAGES_TO_INSTALL=python=3.10.9 git"
     set "CHANNEL=-c conda-forge -c pytorch"
 ) else if /I "%gpuchoice%" == "B" (
-    set "PACKAGES_TO_INSTALL=pytorch torchvision torchaudio cpuonly transformers git"
+    set "PACKAGES_TO_INSTALL=python=3.11.9 pytorch torchvision torchaudio cpuonly transformers git"
     set "CHANNEL=-c conda-forge -c pytorch"
+) else if /I "%gpuchoice%" == "C" (
+    set "PACKAGES_TO_INSTALL=python=3.11.9 pytorch pytorch-cuda torchvision torchaudio transformers git"
+    set "CHANNEL=-c conda-forge -c pytorch -c nvidia"
 ) else (
     echo Invalid choice. Exiting...
     exit
@@ -36,7 +40,7 @@ set PATH=%PATH%;%SystemRoot%\system32
 
 set MAMBA_ROOT_PREFIX=%cd%\installer_files\mamba
 set INSTALL_ENV_DIR=%cd%\installer_files\env
-set MICROMAMBA_DOWNLOAD_URL=https://github.com/mamba-org/micromamba-releases/releases/download/1.4.0-0/micromamba-win-64
+set MICROMAMBA_DOWNLOAD_URL=https://github.com/mamba-org/micromamba-releases/releases/download/1.5.8-0/micromamba-win-64
 set REPO_URL=https://github.com/janvarev/OneRingTranslator
 set umamba_exists=F
 
@@ -66,6 +70,7 @@ if "%PACKAGES_TO_INSTALL%" NEQ "" (
     @rem create the installer env
     if not exist "%INSTALL_ENV_DIR%" (
       echo Packages to install: %PACKAGES_TO_INSTALL%
+      call "%MAMBA_ROOT_PREFIX%\micromamba.exe" config set extract_threads 1
       call "%MAMBA_ROOT_PREFIX%\micromamba.exe" create -y --prefix "%INSTALL_ENV_DIR%" %CHANNEL% %PACKAGES_TO_INSTALL% || ( echo. && echo Conda environment creation failed. && goto end )
     )
 )
@@ -85,7 +90,7 @@ if exist OneRingTranslator\ (
   cd OneRingTranslator || goto end
 )
 call python -m pip install -r requirements.txt --upgrade
-if /I "%gpuchoice%" == "B" (
+if /I not "%gpuchoice%" == "A" (
   call python -m pip install -r requirements-offline.txt --upgrade
   call python -m pip install -r requirements-bleu.txt --upgrade
 )
